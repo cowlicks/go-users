@@ -11,10 +11,17 @@ func cleanDB(db * sql.DB) {
     os.Remove("./foo.db")
 }
 
+func check(err error) {
+    if err != nil {
+        panic(err)
+    }
+}
+
+
 func TestDataBaseCRUD(t * testing.T) {
     os.Remove("./foo.db")
     db, err := sql.Open("sqlite3", "./foo.db")
-    Check(err)
+    check(err)
     defer cleanDB(db)
 
     creds := UserCredentials{username: "foo",
@@ -26,18 +33,18 @@ func TestDataBaseCRUD(t * testing.T) {
 
     // Create
     err = CreateUser(db, creds)
-    Check(err)
+    check(err)
     err = CreateUser(db, creds2)
-    Check(err)
+    check(err)
 
     exists, err := UserExists(db, creds.username)
-    Check(err)
+    check(err)
     if exists == false {
        t.Fail()
    }
 
     no_exists, err := UserExists(db, "nonexistent user")
-    Check(err)
+    check(err)
     if no_exists == true {
         t.Fail()
     }
@@ -62,7 +69,7 @@ func TestDataBaseCRUD(t * testing.T) {
     new_creds := UserCredentials{username: "Noam",
                                  password: "Chomsky"}
     err2 := UpdateUser(db, creds, new_creds)
-    Check(err2)
+    check(err2)
     res4 := VerifyCredentials(db, new_creds)
     if res4 != true {
         t.Fail()
