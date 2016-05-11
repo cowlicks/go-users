@@ -12,18 +12,16 @@ import (
     "golang.org/x/crypto/bcrypt"
 )
 
-func Check(err error) {
-    if err != nil {
-        panic(err)
-    }
-}
+const (
+    bcrypt_cost int = bcrypt.DefaultCost
+)
 
 type UserCredentials struct {
     username string
     password string
 }
 
-func CreateUserTable(db * sql.DB) {
+func CreateUserTable(db * sql.DB) error {
     sqlStmt := `
     CREATE TABLE IF NOT EXISTS userinfo(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,7 +30,7 @@ func CreateUserTable(db * sql.DB) {
 	);
     `
     _, err := db.Exec(sqlStmt)
-    Check(err)
+    return err
 }
 
 func UserExists(db * sql.DB, username string) (bool, error) {
@@ -59,18 +57,23 @@ func CreateUser(db * sql.DB, uc UserCredentials) error {
 
     // hash password
     hashed_pw, err := bcrypt.GenerateFromPassword([]byte(uc.password),
-                                                  bcrypt.DefaultCost)
-    Check(err)
+                                                  bcrypt_cost)
+    if err != nil {
+        return err
+    }
 
     sqlStmt := `INSERT INTO userinfo(username, password) values(?,?)`
     stmt, err := db.Prepare(sqlStmt)
-    Check(err)
+    if err != nil {
+        return err
+    }
 
     // User
     _, err = stmt.Exec(uc.username, hashed_pw)
-    Check(err)
+    if err != nil {
+        return err
+    }
     return nil
-
 }
 
 func VerifyCredentials(db * sql.DB, uc UserCredentials) bool {
@@ -100,7 +103,7 @@ func UpdateUser(db * sql.DB, old_creds, new_creds UserCredentials) error {
     }
 
     hashed_pw, err2 := bcrypt.GenerateFromPassword([]byte(new_creds.password),
-                                                   bcrypt.DefaultCost)
+                                                   bcrypt_cost)
     if err2 != nil {
         return err2
     }
