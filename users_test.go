@@ -6,23 +6,30 @@ import (
 	"testing"
 )
 
-func cleanDB(db *sql.DB) {
-	db.Close()
-	os.Remove("./foo.db")
-}
-
 func check(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-func TestDataBaseCRUD(t *testing.T) {
+func setup() SQLiteUserDB {
 	os.Remove("./foo.db")
 	db, err := sql.Open("sqlite3", "./foo.db")
 	check(err)
-	defer cleanDB(db)
-	udb := SQLiteUserDB{db}
+	return SQLiteUserDB{db}
+}
+
+func cleanup(db *SQLiteUserDB) {
+	db.Close()
+	os.Remove("./foo.db")
+}
+
+func TestDataBaseCRUD(t *testing.T) {
+	var udb UserDB
+	var sqldb SQLiteUserDB
+	sqldb = setup()
+	udb = &sqldb
+	defer cleanup(&sqldb)
 
 	creds := UserCredentials{username: "foo",
 		password: "This is such!_asecUR3 Passw0rd?"}
@@ -32,7 +39,7 @@ func TestDataBaseCRUD(t *testing.T) {
 	udb.CreateUserTable()
 
 	// Create
-	err = udb.CreateUser(creds)
+	err := udb.CreateUser(creds)
 	check(err)
 	err = udb.CreateUser(creds2)
 	check(err)
