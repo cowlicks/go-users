@@ -21,7 +21,7 @@ type UserCredentials struct {
 	password string
 }
 
-func CreateUserTable(db *sql.DB) error {
+func (db *SQLiteUserDB) CreateUserTable() error {
 	sqlStmt := `
     CREATE TABLE IF NOT EXISTS userinfo(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +33,11 @@ func CreateUserTable(db *sql.DB) error {
 	return err
 }
 
-func UserExists(db *sql.DB, username string) (bool, error) {
+type SQLiteUserDB struct {
+	*sql.DB
+}
+
+func (db *SQLiteUserDB) UserExists(username string) (bool, error) {
 	var un string
 	sqlStmt := `SELECT username FROM userinfo WHERE username = ?`
 	err := db.QueryRow(sqlStmt, username).Scan(&un)
@@ -48,9 +52,9 @@ func UserExists(db *sql.DB, username string) (bool, error) {
 	}
 }
 
-func CreateUser(db *sql.DB, uc UserCredentials) error {
+func (db *SQLiteUserDB) CreateUser(uc UserCredentials) error {
 	// Check username isn't taken
-	exists, err := UserExists(db, uc.username)
+	exists, err := db.UserExists(uc.username)
 	if exists {
 		return errors.New("Username taken")
 	}
@@ -76,7 +80,7 @@ func CreateUser(db *sql.DB, uc UserCredentials) error {
 	return nil
 }
 
-func VerifyCredentials(db *sql.DB, uc UserCredentials) bool {
+func (db *SQLiteUserDB) VerifyCredentials(uc UserCredentials) bool {
 	var un string
 	var pw string
 	sqlStmt := `SELECT username, password FROM userinfo WHERE username = ?`
@@ -94,10 +98,10 @@ func VerifyCredentials(db *sql.DB, uc UserCredentials) bool {
 	}
 }
 
-func UpdateUser(db *sql.DB, old_creds, new_creds UserCredentials) error {
+func (db *SQLiteUserDB) UpdateUser(old_creds, new_creds UserCredentials) error {
 	updateStmt := `UPDATE userinfo SET username = ?, password = ? WHERE username = ?`
 
-	verified := VerifyCredentials(db, old_creds)
+	verified := db.VerifyCredentials(old_creds)
 	if !verified {
 		return errors.New("The supplied credentials match no existing user.")
 	}
@@ -115,9 +119,9 @@ func UpdateUser(db *sql.DB, old_creds, new_creds UserCredentials) error {
 	return nil
 }
 
-func DeleteUser(db *sql.DB, uc UserCredentials) error {
+func (db *SQLiteUserDB) DeleteUser(uc UserCredentials) error {
 	deleteStmt := `DELETE FROM userinfo WHERE username = ?`
-	verified := VerifyCredentials(db, uc)
+	verified := db.VerifyCredentials(uc)
 	if !verified {
 		return errors.New("The supplied credentials match no existing user.")
 	}
